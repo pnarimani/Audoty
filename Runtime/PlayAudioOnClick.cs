@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -10,7 +9,7 @@ namespace Audoty
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            _audio.Play();
+            _audio.PlayForget();
         }
     }
 }

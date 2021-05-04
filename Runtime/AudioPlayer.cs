@@ -10,12 +10,14 @@ namespace Audoty
     [CreateAssetMenu(fileName = "Audio Player", menuName = "Audio Player", order = 215)]
     public class AudioPlayer : ScriptableObject
     {
-        [SerializeField] private AudioClip[] _clips;
+        [SerializeField] 
+        private AudioClip[] _clips;
 
         [SerializeField, BoxGroup("Parameters")]
         private bool _loop;
 
-        [SerializeField, BoxGroup("Parameters")]
+        [SerializeField, BoxGroup("Parameters"),
+         Tooltip("When true, only one instance of this AudioPlayer will be played")]
         private bool _singleton;
 
         [SerializeField, Range(0, 1), BoxGroup("Parameters")]
@@ -33,8 +35,32 @@ namespace Audoty
         private int _nextId;
         private Handle? _singletonHandle;
 
-        [TabGroup("Random Clip")]
-        [Button(ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
+        /// <summary>
+        /// Plays a random clip Fire & Forget style
+        /// </summary>
+        [Button("Play Random", ButtonSizes.Large)]
+        public void PlayForget()
+        {
+            Play();
+        }
+
+        /// <summary>
+        /// Plays a specific clip Fire & Forget style
+        /// </summary>
+        /// <param name="index"></param>
+        [Button("Play Specific", ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
+        public void PlayForget(int index)
+        {
+            Play(index);
+        }
+
+        /// <summary>
+        /// Plays a random clip, optionally at a position, and returns a handle which can be used to stop the clip.
+        /// If the position is provided, audio will be 3D, otherwise, audio will be played 2D 
+        /// </summary>
+        /// <param name="position">Position to play the clip at.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">When randomly selected clip is null</exception>
         public Handle Play(Vector3? position = null)
         {
             if (_clips.Length == 0)
@@ -43,8 +69,14 @@ namespace Audoty
             return Play(Random.Range(0, _clips.Length), position);
         }
 
-        [TabGroup("Specific Clip")]
-        [Button(ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
+        /// <summary>
+        /// Plays a given clip, optionally at a position, and returns a handle which can be used to stop the clip.
+        /// If the position is provided, audio will be 3D, otherwise, audio will be played 2D 
+        /// </summary>
+        /// <param name="index">The index of the clip to play</param>
+        /// <param name="position">Position to play the clip at.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">When selected clip is null</exception>
         public Handle Play(int index, Vector3? position = null)
         {
             // If this instance is singleton, and there's an instance of audio that is playing, return that instance of audio
@@ -141,11 +173,19 @@ namespace Audoty
                 _player = player;
             }
 
+            /// <summary>
+            /// Returns true if the audio is currently playing
+            /// </summary>
+            /// <returns></returns>
             public bool IsPlaying()
             {
                 return _player._playingSources.ContainsKey(_id);
             }
 
+            /// <summary>
+            /// Stops audio player 
+            /// </summary>
+            /// <returns>true if clip stops, false if clip was already stopped</returns>
             public bool Stop()
             {
                 return _player.Stop(_id);
