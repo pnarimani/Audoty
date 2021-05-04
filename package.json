@@ -1,0 +1,10 @@
+{
+  "name": "com.mnarimani.Audioty",
+  "displayName": "Audioty",
+  "version": "1.0.0",
+  "unity": "2020",
+  "license": "MIT",
+  "dependencies": {
+    "UniTask"
+  }
+}
