@@ -5,6 +5,6 @@
   "unity": "2020",
   "license": "MIT",
   "dependencies": {
-    "UniTask"
+    "com.cysharp.unitask": "2.0.0"
   }
 }
