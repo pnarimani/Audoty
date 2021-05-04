@@ -2,7 +2,7 @@
   "name": "com.mnarimani.audioty",
   "displayName": "Audioty",
   "version": "1.0.0",
-  "unity": "2020",
+  "unity": "2020.1",
   "license": "MIT",
   "dependencies": {
     "com.cysharp.unitask": "2.0.0"
