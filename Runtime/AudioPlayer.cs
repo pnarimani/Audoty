@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Sirenix.OdinInspector;
@@ -7,56 +7,24 @@ using Random = UnityEngine.Random;
 
 namespace Audioty
 {
-    [CreateAssetMenu(fileName = "Audio Player", menuName = "Audio Player", order = 40)]
+    [CreateAssetMenu(fileName = "Audio Player", menuName = "Audio Player", order = 215)]
     public class AudioPlayer : ScriptableObject
     {
         private static readonly Queue<AudioSource> Pool = new Queue<AudioSource>();
 
         [SerializeField] private AudioClip[] _clips;
-        [SerializeField, Range(0, 1)] private float _volume = 1;
-        [SerializeField] private float _minDistance = 1, _maxDistance = 500;
-        [SerializeField] private bool _isAmbient;
-        [SerializeField, MinMaxSlider(-3, 3)] private Vector2 _pitch = Vector2.one;
+        [SerializeField, BoxGroup("Parameters")] private bool _isAmbient;
+        [SerializeField, Range(0, 1), BoxGroup("Parameters")] private float _volume = 1;
+        [SerializeField, BoxGroup("Parameters")] private float _minDistance = 1, _maxDistance = 500;
+        [SerializeField, MinMaxSlider(-3, 3), BoxGroup("Parameters")] private Vector2 _pitch = Vector2.one;
 
 
         // If the AudioPlayer is ambient, then we only want to play one instance of the audio
-        private bool _isPlaying;
+        private bool _isPlayingAmbient;
 
-        [Button]
-        public void Play()
-        {
-            if (_clips.Length == 0)
-                throw new Exception($"No clips has been set for Audio Player {name}");
-
-            Play(Random.Range(0, _clips.Length));
-        }
-
-        [Button]
-        public void Play(int index)
-        {
-            if (_isPlaying)
-                return;
-
-            var audioSource = Spawn();
-
-            ConfigureAudioSource(audioSource, false);
-
-            AudioClip c = _clips[index];
-
-            if (c == null)
-                throw new Exception($"Null clip in {name} audio player");
-
-            audioSource.clip = c;
-            audioSource.Play();
-            _isPlaying = true;
-
-            if (!_isAmbient)
-                Despawn(audioSource, c.length).Forget();
-            else
-                _isPlaying = true;
-        }
-
-        public void Play(Vector3 position)
+        [TabGroup("Random Clip")]
+        [Button(ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
+        public void Play(Vector3? position = null)
         {
             if (_clips.Length == 0)
                 throw new Exception($"No clips has been set for Audio Player {name}");
@@ -64,29 +32,32 @@ namespace Audioty
             Play(Random.Range(0, _clips.Length), position);
         }
 
-        public void Play(int index, Vector3 position)
+        [TabGroup("Specific Clip")]
+        [Button(ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
+        public void Play(int index, Vector3? position = null)
         {
-            if (_isPlaying)
+            if (_isPlayingAmbient)
                 return;
 
             var audioSource = Spawn();
 
-            ConfigureAudioSource(audioSource, true);
-            audioSource.transform.position = position;
+            ConfigureAudioSource(audioSource, position != null);
 
-            var c = _clips[index];
+            AudioClip c = _clips[index];
 
             if (c == null)
                 throw new Exception($"Null clip in {name} audio player");
 
+            if (position != null)
+                audioSource.transform.position = position.Value;
+            
             audioSource.clip = c;
             audioSource.Play();
 
-
-            if (!_isAmbient)
-                Despawn(audioSource, c.length).Forget();
+            if (_isAmbient)
+                _isPlayingAmbient = true;
             else
-                _isPlaying = true;
+                Despawn(audioSource, c.length).Forget();
         }
 
         private void ConfigureAudioSource(AudioSource source, bool spatial)
