@@ -5,7 +5,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace Audioty
+namespace Audoty
 {
     [CreateAssetMenu(fileName = "Audio Player", menuName = "Audio Player", order = 215)]
     public class AudioPlayer : ScriptableObject
