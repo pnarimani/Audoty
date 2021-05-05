@@ -10,14 +10,17 @@ namespace Audoty
     [CreateAssetMenu(fileName = "Audio Player", menuName = "Audio Player", order = 215)]
     public class AudioPlayer : ScriptableObject
     {
-        [SerializeField] 
-        private AudioClip[] _clips;
+        [SerializeField] private List<AudioClip> _clips;
+
+        [SerializeField, BoxGroup("Parameters")]
+        private bool _saveParameters;
 
         [SerializeField, BoxGroup("Parameters")]
         private bool _loop;
 
-        [SerializeField, BoxGroup("Parameters"),
-         Tooltip("When true, only one instance of this AudioPlayer will be played")]
+        [SerializeField]
+        [BoxGroup("Parameters")]
+        [Tooltip("When true, only one instance of this AudioPlayer will be played")]
         private bool _singleton;
 
         [SerializeField, Range(0, 1), BoxGroup("Parameters")]
@@ -34,6 +37,137 @@ namespace Audoty
 
         private int _nextId;
         private Handle? _singletonHandle;
+
+        public List<AudioClip> Clips
+        {
+            get => _clips;
+            set => _clips = value;
+        }
+
+        public bool SaveParameters => _saveParameters;
+
+        public bool Loop
+        {
+            get => _loop;
+            set => _loop = value;
+        }
+
+        public bool Singleton
+        {
+            get => _singleton;
+            set => _singleton = value;
+        }
+
+        public float Volume
+        {
+            get => _volume;
+            set => _volume = value;
+        }
+
+        public float MinDistance
+        {
+            get => _minDistance;
+            set => _minDistance = value;
+        }
+
+        public float MaxDistance
+        {
+            get => _maxDistance;
+            set => _maxDistance = value;
+        }
+
+        public Vector2 Pitch
+        {
+            get => _pitch;
+            set => _pitch = value;
+        }
+
+        private string PersistentPrefix
+        {
+            get
+            {
+                string clip = _clips.Count > 0 ? _clips[0].name : "null";
+                return name + "_" + clip + "_";
+            }
+        }
+
+        private bool PersistentLoop
+        {
+            get => PlayerPrefs.GetInt(PersistentPrefix + "loop", _loop ? 1 : 0) == 1;
+            set => PlayerPrefs.SetInt(PersistentPrefix + "loop", value ? 1 : 0);
+        }
+
+        private bool PersistentSingleton
+        {
+            get => PlayerPrefs.GetInt(PersistentPrefix + "singleton", _singleton ? 1 : 0) == 1;
+            set => PlayerPrefs.SetInt(PersistentPrefix + "singleton", value ? 1 : 0);
+        }
+
+        private float PersistentVolume
+        {
+            get => PlayerPrefs.GetFloat(PersistentPrefix + "volume", _volume);
+            set => PlayerPrefs.SetFloat(PersistentPrefix + "volume", value);
+        }
+
+        private float PersistentMinDistance
+        {
+            get => PlayerPrefs.GetFloat(PersistentPrefix + "minDistance", _minDistance);
+            set => PlayerPrefs.SetFloat(PersistentPrefix + "minDistance", value);
+        }
+
+        private float PersistentMaxDistance
+        {
+            get => PlayerPrefs.GetFloat(PersistentPrefix + "maxDistance", _maxDistance);
+            set => PlayerPrefs.SetFloat(PersistentPrefix + "maxDistance", value);
+        }
+
+        private Vector2 PersistentPitch
+        {
+            get
+            {
+                float x = PlayerPrefs.GetFloat(PersistentPrefix + "pitchX", _pitch.x);
+                float y = PlayerPrefs.GetFloat(PersistentPrefix + "pitchY", _pitch.y);
+                return new Vector2(x, y);
+            }
+            set
+            {
+                PlayerPrefs.SetFloat(PersistentPrefix + "pitchX", value.x);
+                PlayerPrefs.SetFloat(PersistentPrefix + "pitchY", value.y);
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (Application.isEditor)
+                return;
+
+            if (!_saveParameters)
+                return;
+
+            Loop = PersistentLoop;
+            Singleton = PersistentSingleton;
+            Volume = PersistentVolume;
+            MinDistance = PersistentMinDistance;
+            MaxDistance = PersistentMaxDistance;
+            Pitch = PersistentPitch;
+        }
+
+        private void OnDisable()
+        {
+            if (Application.isEditor)
+                return;
+
+            if (!_saveParameters)
+                return;
+
+            PersistentLoop = Loop;
+            PersistentSingleton = Singleton;
+            PersistentVolume = Volume;
+            PersistentMinDistance = MinDistance;
+            PersistentMaxDistance = MaxDistance;
+            PersistentPitch = Pitch;
+            PlayerPrefs.Save();
+        }
 
         /// <summary>
         /// Plays a random clip Fire & Forget style
@@ -63,10 +197,10 @@ namespace Audoty
         /// <exception cref="Exception">When randomly selected clip is null</exception>
         public Handle Play(Vector3? position = null)
         {
-            if (_clips.Length == 0)
+            if (_clips.Count == 0)
                 throw new Exception($"No clips has been set for Audio Player {name}");
 
-            return Play(Random.Range(0, _clips.Length), position);
+            return Play(Random.Range(0, _clips.Count), position);
         }
 
         /// <summary>
@@ -179,6 +313,9 @@ namespace Audoty
             /// <returns></returns>
             public bool IsPlaying()
             {
+                if (_player == null)
+                    return false;
+                
                 return _player._playingSources.ContainsKey(_id);
             }
 
@@ -188,6 +325,9 @@ namespace Audoty
             /// <returns>true if clip stops, false if clip was already stopped</returns>
             public bool Stop()
             {
+                if (_player == null)
+                    return false;
+                
                 return _player.Stop(_id);
             }
         }
