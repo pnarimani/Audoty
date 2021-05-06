@@ -24,6 +24,10 @@ namespace Audoty
         private bool _loop;
 
         [SerializeField, BoxGroup("Parameters")]
+        [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
+        private bool _liveLinkLoop = true;
+
+        [SerializeField, BoxGroup("Parameters")]
         private bool _saveLoop;
 
         [SerializeField]
@@ -39,6 +43,10 @@ namespace Audoty
         private float _volume = 1;
 
         [SerializeField, BoxGroup("Parameters")]
+        [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
+        private bool _liveLinkVolume = true;
+
+        [SerializeField, BoxGroup("Parameters")]
         private bool _saveVolume;
 
         [Space] [SerializeField, BoxGroup("Parameters")]
@@ -48,10 +56,18 @@ namespace Audoty
         private float _maxDistance = 500;
 
         [SerializeField, BoxGroup("Parameters")]
+        [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
+        private bool _liveLinkDistances = true;
+
+        [SerializeField, BoxGroup("Parameters")]
         private bool _saveDistances;
 
         [Space] [SerializeField, MinMaxSlider(-3, 3), BoxGroup("Parameters")]
         private Vector2 _pitch = Vector2.one;
+
+        [SerializeField, BoxGroup("Parameters")]
+        [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
+        private bool _liveLinkPitch = true;
 
         [SerializeField, BoxGroup("Parameters")]
         private bool _savePitch;
@@ -387,7 +403,7 @@ namespace Audoty
                 source = go.GetComponent<AudioSource>();
             }
 
-            ConfigureParameters(source);
+            ConfigureParameters(source, false);
 
             source.spatialBlend = position != null ? 1 : 0;
             source.transform.position = position ?? Vector3.zero;
@@ -395,13 +411,22 @@ namespace Audoty
             return source;
         }
 
-        private void ConfigureParameters(AudioSource source)
+        private void ConfigureParameters(AudioSource source, bool live)
         {
-            source.pitch = Random.Range(_pitch.x, _pitch.y);
-            source.volume = _volume;
-            source.minDistance = _minDistance;
-            source.maxDistance = _maxDistance;
-            source.loop = _loop;
+            if (!live || _liveLinkPitch)
+                source.pitch = Random.Range(_pitch.x, _pitch.y);
+            
+            if (!live || _liveLinkVolume)
+                source.volume = _volume;
+            
+            if (!live || _liveLinkDistances)
+            {
+                source.minDistance = _minDistance;
+                source.maxDistance = _maxDistance;
+            }
+
+            if (!live || _liveLinkLoop)
+                source.loop = _loop;
         }
 
 #if USE_UNITASK
@@ -557,7 +582,7 @@ namespace Audoty
                 if (source == null)
                     return;
 
-                ConfigureParameters(source);
+                ConfigureParameters(source, true);
             }
         }
 
