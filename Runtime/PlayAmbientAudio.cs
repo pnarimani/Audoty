@@ -2,6 +2,9 @@ using UnityEngine;
 
 namespace Audoty
 {
+    /// <summary>
+    /// Starts playing an AudioPlayer when gets enabled and stops the audio when gets disabled.
+    /// </summary>
     public class PlayAmbientAudio : MonoBehaviour
     {
         [Tooltip("If target position is provided, audio will be played in 3D, otherwise audio will be played in 2D")]
@@ -16,7 +19,7 @@ namespace Audoty
         {
             if (_audio == null)
                 return;
-            
+
             _handle = _targetPosition != null ? _audio.Play(_targetPosition.position) : _audio.Play();
         }
 
@@ -24,7 +27,7 @@ namespace Audoty
         {
             if (_audio == null)
                 return;
-            
+
             _handle.Stop();
         }
     }

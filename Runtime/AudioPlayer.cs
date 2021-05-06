@@ -231,6 +231,11 @@ namespace Audoty
             Play(index);
         }
 
+        public void PlayForget(string clipName)
+        {
+            Play(clipName);
+        }
+
         /// <summary>
         /// Stops singleton instance if it's playing
         /// </summary>
@@ -252,6 +257,22 @@ namespace Audoty
                 throw new NoClipsFoundException(this);
 
             return Play(Random.Range(0, _clips.Count), position);
+        }
+
+        /// <summary>
+        /// Finds and plays a clip by clip name, optionally at a position, and returns a handle which can be used to stop the clip.
+        /// If the position is provided, audio will be 3D, otherwise, audio will be played 2D 
+        /// </summary>
+        /// <param name="clipName">The name of the clip to play</param>
+        /// <param name="position">Position to play the clip at.</param>
+        /// <returns></returns>
+        public Handle Play(string clipName, Vector3? position = null)
+        {
+            int index = _clips.FindIndex(x => x.name == clipName);
+            if (index == -1)
+                throw new ClipNotFoundException(this, clipName);
+
+            return Play(index, position);
         }
 
         /// <summary>
