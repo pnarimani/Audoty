@@ -8,15 +8,19 @@ namespace Audoty
     /// </summary>
     public class PlayAmbientAudio : MonoBehaviour
     {
+        [SerializeField] private AudioPlayer _audio;
+
         [Tooltip("If target position is provided, audio will be played in 3D, otherwise audio will be played in 2D")]
         [SerializeField]
         private Transform _targetPosition;
 
         [SerializeField] private bool _useRandomClip = true;
 
-        [SerializeField, HideIf(nameof(_useRandomClip))] private int _clipIndex;
-        
-        [SerializeField] private AudioPlayer _audio;
+
+        [SerializeField, HideIf(nameof(_useRandomClip))]
+        private int _clipIndex;
+
+        [SerializeField] private bool _stopOnDisable = true;
 
         private AudioPlayer.Handle _handle;
 
@@ -35,7 +39,8 @@ namespace Audoty
             if (_audio == null)
                 return;
 
-            _handle.Stop();
+            if (_stopOnDisable)
+                _handle.Stop();
         }
     }
 }

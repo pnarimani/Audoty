@@ -36,6 +36,11 @@ namespace Audoty
         [Tooltip("When true, only one instance of this AudioPlayer will be played")]
         private bool _singleton;
 
+        [SerializeField, BoxGroup("Parameters"), ShowIf(nameof(_singleton))]
+        [Tooltip(
+            "When true, a live singleton audio source will be interrupted to play a new clip (from the same Audio Player)")]
+        private bool _allowInterrupt = true;
+
         [SerializeField, BoxGroup("Parameters")]
         private bool _saveSingelton;
 
@@ -73,7 +78,7 @@ namespace Audoty
         private bool _savePitch;
 
         [SerializeField, HideInInspector] private int _randomizedSaveKey;
-        
+
         private static readonly Queue<AudioSource> Pool = new Queue<AudioSource>();
         private readonly Dictionary<int, AudioSource> _playingSources = new Dictionary<int, AudioSource>();
 
@@ -163,6 +168,15 @@ namespace Audoty
                 SaveParameters();
                 ReconfigurePlayingAudioSources();
             }
+        }
+
+        /// <summary>
+        /// When true, a live singleton audio source will be interrupted to play a new clip from the same AudioPlayer
+        /// </summary>
+        public bool AllowInterrupt
+        {
+            get => _allowInterrupt;
+            set => _allowInterrupt = value;
         }
 
 #if UNITY_EDITOR
@@ -303,10 +317,15 @@ namespace Audoty
 #if UNITY_EDITOR
             CheckSaveKeyConflict();
 #endif
-            
+
             // If this instance is singleton, and there's an instance of audio that is playing, return that instance of audio
             if (_singleton && _singletonHandle != null && _singletonHandle.Value.IsPlaying())
-                return _singletonHandle.Value;
+            {
+                if (!_allowInterrupt || index == _singletonHandle.Value.ClipIndex)
+                    return _singletonHandle.Value;
+
+                _singletonHandle.Value.Stop();
+            }
 
             AudioSource audioSource = Spawn(position);
 
@@ -345,7 +364,7 @@ namespace Audoty
 
             _playingSources.Add(id, audioSource);
 
-            var handle = new Handle(this, id);
+            var handle = new Handle(this, id, index);
 
             if (_singleton)
                 _singletonHandle = handle;
@@ -415,10 +434,10 @@ namespace Audoty
         {
             if (!live || _liveLinkPitch)
                 source.pitch = Random.Range(_pitch.x, _pitch.y);
-            
+
             if (!live || _liveLinkVolume)
                 source.volume = _volume;
-            
+
             if (!live || _liveLinkDistances)
             {
                 source.minDistance = _minDistance;
@@ -472,9 +491,9 @@ namespace Audoty
         {
             while (_randomizedSaveKey == 0)
                 _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
-            
+
             CheckSaveKeyConflict();
-            
+
             ReconfigurePlayingAudioSources();
         }
 
@@ -489,21 +508,22 @@ namespace Audoty
             {
                 SaveKeys.Remove(k);
             }
-            
+
             const int iterations = 1000;
             for (int i = 0; i < iterations; i++)
             {
-                if (_randomizedSaveKey == 0) 
+                if (_randomizedSaveKey == 0)
                     OnValidate();
 
                 if (SaveKeys.TryGetValue(_randomizedSaveKey, out AudioPlayer existing))
                 {
-                    if (existing == this) 
+                    if (existing == this)
                         return;
 
                     string existingName = existing != null ? existing.name : "Unknown";
-                    
-                    Debug.LogError($"Found conflicting save keys between Audio Player `{existingName}` and `{name}`. Resolving the conflict by changing save key of {name}");
+
+                    Debug.LogError(
+                        $"Found conflicting save keys between Audio Player `{existingName}` and `{name}`. Resolving the conflict by changing save key of {name}");
                     _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
                     continue;
                 }
@@ -591,11 +611,14 @@ namespace Audoty
             private readonly AudioPlayer _player;
             private readonly int _id;
 
-            public Handle(AudioPlayer player, int id)
+            public Handle(AudioPlayer player, int id, int clipIndex)
             {
+                ClipIndex = clipIndex;
                 _id = id;
                 _player = player;
             }
+
+            public int ClipIndex { get; }
 
             /// <summary>
             /// Returns true if the audio is currently playing
