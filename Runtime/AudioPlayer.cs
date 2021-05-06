@@ -1,9 +1,20 @@
-using System;
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using Random = UnityEngine.Random;
+
+#if USE_UNITASK
+using Cysharp.Threading.Tasks;
+#else
+// Enables the use of coroutines
+using System.Collections;
+
+#endif
+
+
+#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+using Unity.EditorCoroutines.Editor;
+
+#endif
 
 namespace Audoty
 {
@@ -13,38 +24,61 @@ namespace Audoty
         [SerializeField] private List<AudioClip> _clips;
 
         [SerializeField, BoxGroup("Parameters")]
-        private bool _saveParameters;
-
-        [SerializeField, BoxGroup("Parameters")]
         private bool _loop;
 
+        [SerializeField, BoxGroup("Parameters")]
+        private bool _saveLoop;
+
         [SerializeField]
+        [Space]
         [BoxGroup("Parameters")]
         [Tooltip("When true, only one instance of this AudioPlayer will be played")]
         private bool _singleton;
 
-        [SerializeField, Range(0, 1), BoxGroup("Parameters")]
+        [SerializeField, BoxGroup("Parameters")]
+        private bool _saveSingelton;
+
+        [Space] [SerializeField, Range(0, 1), BoxGroup("Parameters")]
         private float _volume = 1;
 
         [SerializeField, BoxGroup("Parameters")]
-        private float _minDistance = 1, _maxDistance = 500;
+        private bool _saveVolume;
 
-        [SerializeField, MinMaxSlider(-3, 3), BoxGroup("Parameters")]
+        [Space] [SerializeField, BoxGroup("Parameters")]
+        private float _minDistance = 1;
+
+        [SerializeField, BoxGroup("Parameters")]
+        private float _maxDistance = 500;
+
+        [SerializeField, BoxGroup("Parameters")]
+        private bool _saveDistances;
+
+        [Space] [SerializeField, MinMaxSlider(-3, 3), BoxGroup("Parameters")]
         private Vector2 _pitch = Vector2.one;
+
+        [SerializeField, BoxGroup("Parameters")]
+        private bool _savePitch;
+
+        [SerializeField, HideInInspector] private int _randomizedSaveKey;
 
         private static readonly Queue<AudioSource> Pool = new Queue<AudioSource>();
         private readonly Dictionary<int, AudioSource> _playingSources = new Dictionary<int, AudioSource>();
 
+#if !USE_UNITASK
+        private CoroutineRunner _coroutineRunner;
+#endif
         private int _nextId;
         private Handle? _singletonHandle;
+
+#if UNITY_EDITOR
+        private Handle? _lastPlayedAudio;
+#endif
 
         public List<AudioClip> Clips
         {
             get => _clips;
             set => _clips = value;
         }
-
-        public bool SaveParameters => _saveParameters;
 
         public bool Loop
         {
@@ -82,14 +116,11 @@ namespace Audoty
             set => _pitch = value;
         }
 
-        private string PersistentPrefix
-        {
-            get
-            {
-                string clip = _clips.Count > 0 ? _clips[0].name : "null";
-                return name + "_" + clip + "_";
-            }
-        }
+#if UNITY_EDITOR
+        private bool ShowStopButton => _lastPlayedAudio != null && _lastPlayedAudio.Value.IsPlaying();
+#endif
+        
+        private string PersistentPrefix => name + "_" + _randomizedSaveKey + "_";
 
         private bool PersistentLoop
         {
@@ -141,15 +172,23 @@ namespace Audoty
             if (Application.isEditor)
                 return;
 
-            if (!_saveParameters)
-                return;
+            if (_saveLoop)
+                Loop = PersistentLoop;
 
-            Loop = PersistentLoop;
-            Singleton = PersistentSingleton;
-            Volume = PersistentVolume;
-            MinDistance = PersistentMinDistance;
-            MaxDistance = PersistentMaxDistance;
-            Pitch = PersistentPitch;
+            if (_saveSingelton)
+                Singleton = PersistentSingleton;
+
+            if (_saveVolume)
+                Volume = PersistentVolume;
+
+            if (_saveDistances)
+            {
+                MinDistance = PersistentMinDistance;
+                MaxDistance = PersistentMaxDistance;
+            }
+
+            if (_savePitch)
+                Pitch = PersistentPitch;
         }
 
         private void OnDisable()
@@ -157,15 +196,24 @@ namespace Audoty
             if (Application.isEditor)
                 return;
 
-            if (!_saveParameters)
-                return;
+            if (_saveLoop)
+                PersistentLoop = Loop;
 
-            PersistentLoop = Loop;
-            PersistentSingleton = Singleton;
-            PersistentVolume = Volume;
-            PersistentMinDistance = MinDistance;
-            PersistentMaxDistance = MaxDistance;
-            PersistentPitch = Pitch;
+            if (_saveSingelton)
+                PersistentSingleton = Singleton;
+
+            if (_saveVolume)
+                PersistentVolume = Volume;
+
+            if (_saveDistances)
+            {
+                PersistentMinDistance = MinDistance;
+                PersistentMaxDistance = MaxDistance;
+            }
+
+            if (_savePitch)
+                PersistentPitch = Pitch;
+
             PlayerPrefs.Save();
         }
 
@@ -173,6 +221,10 @@ namespace Audoty
         /// Plays a random clip Fire & Forget style
         /// </summary>
         [Button("Play Random", ButtonSizes.Large)]
+#if !USE_UNITASK && !USE_EDITOR_COROUTINES
+        [InfoBox("In order to return Audio Sources to pool in Edit Mode, you need to install UniTask or Editor Coroutines package.\n(There will be no problems in play mode)", InfoMessageType.Error, VisibleIf = "@UnityEngine.Application.isPlaying == false")]
+#endif
+        [HideIf("ShowStopButton")]
         public void PlayForget()
         {
             Play();
@@ -183,6 +235,7 @@ namespace Audoty
         /// </summary>
         /// <param name="index"></param>
         [Button("Play Specific", ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
+        [HideIf("ShowStopButton")]
         public void PlayForget(int index)
         {
             Play(index);
@@ -194,11 +247,10 @@ namespace Audoty
         /// </summary>
         /// <param name="position">Position to play the clip at.</param>
         /// <returns></returns>
-        /// <exception cref="Exception">When randomly selected clip is null</exception>
         public Handle Play(Vector3? position = null)
         {
             if (_clips.Count == 0)
-                throw new Exception($"No clips has been set for Audio Player {name}");
+                throw new NoClipsFoundException(this);
 
             return Play(Random.Range(0, _clips.Count), position);
         }
@@ -210,19 +262,18 @@ namespace Audoty
         /// <param name="index">The index of the clip to play</param>
         /// <param name="position">Position to play the clip at.</param>
         /// <returns></returns>
-        /// <exception cref="Exception">When selected clip is null</exception>
         public Handle Play(int index, Vector3? position = null)
         {
             // If this instance is singleton, and there's an instance of audio that is playing, return that instance of audio
             if (_singleton && _singletonHandle != null && _singletonHandle.Value.IsPlaying())
                 return _singletonHandle.Value;
 
-            var audioSource = Spawn(position);
+            AudioSource audioSource = Spawn(position);
 
             AudioClip clip = _clips[index];
 
             if (clip == null)
-                throw new Exception($"Null clip in {name} audio player");
+                throw new ClipNullException(this, index);
 
             if (position != null)
                 audioSource.transform.position = position.Value;
@@ -233,18 +284,49 @@ namespace Audoty
             int id = _nextId;
             _nextId++;
 
+            // Since looping audios will be playing forever, we are not going to despawn them
             if (!_loop)
+            {
+                // Select despawn strategy based on what packages are present
+#if USE_UNITASK
                 DespawnAfter(id, clip.length).Forget();
+#else
+
+#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+                if (Application.isPlaying)
+                    RunCoroutine(DespawnAfter(id, clip.length));
+                else
+                    EditorCoroutineUtility.StartCoroutine(DespawnAfter(id, clip.length), this);
+#else
+                RunCoroutine(DespawnAfter(id, clip.length));
+#endif
+
+#endif
+            }
 
             _playingSources.Add(id, audioSource);
 
             var handle = new Handle(this, id);
-
+            
             if (_singleton)
                 _singletonHandle = handle;
 
+#if UNITY_EDITOR
+            _lastPlayedAudio = handle;
+#endif
+            
             return handle;
         }
+
+#if UNITY_EDITOR
+        [Button("Stop", ButtonSizes.Large), ShowIf("ShowStopButton")]
+        private void StopLastPlayingClip()
+        {
+            if (_lastPlayedAudio != null)
+                _lastPlayedAudio.Value.Stop();
+        }
+#endif
+
 
         private bool Stop(int id)
         {
@@ -290,16 +372,63 @@ namespace Audoty
             return source;
         }
 
+#if USE_UNITASK
         private async UniTask DespawnAfter(int id, float time)
         {
             await UniTask.Delay((int) (time * 1000));
             Stop(id);
         }
+#else
 
-        public struct Handle
+        private void RunCoroutine(IEnumerator coroutine)
         {
-            private AudioPlayer _player;
-            private int _id;
+            if (_coroutineRunner == null)
+            {
+                _coroutineRunner = new GameObject("Coroutine Runner", typeof(CoroutineRunner))
+                {
+                    hideFlags = HideFlags.HideAndDontSave
+                }.GetComponent<CoroutineRunner>();
+            }
+
+            _coroutineRunner.StartCoroutine(coroutine);
+        }
+
+        private IEnumerator DespawnAfter(int id, float time)
+        {
+#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                yield return new EditorWaitForSeconds(time);
+            }
+            else
+            {
+                yield return new WaitForSeconds(time);
+            }
+#else
+            yield return new WaitForSeconds(time);
+#endif
+            Stop(id);
+        }
+#endif
+
+#if UNITY_EDITOR
+        private void Reset()
+        {
+            while (_randomizedSaveKey == 0)
+                _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
+        }
+
+        private void OnValidate()
+        {
+            while (_randomizedSaveKey == 0)
+                _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
+        }
+#endif
+
+        public readonly struct Handle
+        {
+            private readonly AudioPlayer _player;
+            private readonly int _id;
 
             public Handle(AudioPlayer player, int id)
             {
@@ -315,7 +444,7 @@ namespace Audoty
             {
                 if (_player == null)
                     return false;
-                
+
                 return _player._playingSources.ContainsKey(_id);
             }
 
@@ -327,7 +456,7 @@ namespace Audoty
             {
                 if (_player == null)
                     return false;
-                
+
                 return _player.Stop(_id);
             }
         }

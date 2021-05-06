@@ -3,8 +3,5 @@
   "displayName": "Audoty",
   "version": "1.0.1",
   "unity": "2020.1",
-  "license": "MIT",
-  "dependencies": {
-    "com.cysharp.unitask": "2.0.0"
-  }
+  "license": "MIT"
 }
