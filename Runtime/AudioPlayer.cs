@@ -412,12 +412,6 @@ namespace Audoty
 #endif
 
 #if UNITY_EDITOR
-        private void Reset()
-        {
-            while (_randomizedSaveKey == 0)
-                _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
-        }
-
         private void OnValidate()
         {
             while (_randomizedSaveKey == 0)
