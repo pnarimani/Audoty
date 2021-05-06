@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
 #if USE_UNITASK
@@ -56,7 +57,7 @@ namespace Audoty
         private bool _savePitch;
 
         [SerializeField, HideInInspector] private int _randomizedSaveKey;
-
+        
         private static readonly Queue<AudioSource> Pool = new Queue<AudioSource>();
         private readonly Dictionary<int, AudioSource> _playingSources = new Dictionary<int, AudioSource>();
 
@@ -67,6 +68,8 @@ namespace Audoty
         private Handle? _singletonHandle;
 
 #if UNITY_EDITOR
+        // Keep record of keys to make sure there is no conflict
+        private static readonly Dictionary<int, AudioPlayer> SaveKeys = new Dictionary<int, AudioPlayer>();
         private Handle? _lastPlayedAudio;
 #endif
 
@@ -150,7 +153,7 @@ namespace Audoty
         private bool ShowStopButton => _lastPlayedAudio != null && _lastPlayedAudio.Value.IsPlaying();
 #endif
 
-        private string PersistentPrefix => name + "_" + _randomizedSaveKey + "_";
+        private string PersistentPrefix => _randomizedSaveKey + "_";
 
         private bool PersistentLoop
         {
@@ -260,6 +263,10 @@ namespace Audoty
         /// <returns></returns>
         public Handle Play(int index, Vector3? position = null)
         {
+#if UNITY_EDITOR
+            CheckSaveKeyConflict();
+#endif
+            
             // If this instance is singleton, and there's an instance of audio that is playing, return that instance of audio
             if (_singleton && _singletonHandle != null && _singletonHandle.Value.IsPlaying())
                 return _singletonHandle.Value;
@@ -419,11 +426,54 @@ namespace Audoty
         {
             while (_randomizedSaveKey == 0)
                 _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
+            
+            CheckSaveKeyConflict();
+        }
+
+        private void CheckSaveKeyConflict()
+        {
+            // Remove all entries which their audio player has been destroyed
+            int[] keysToRemove = SaveKeys
+                .Where(x => x.Value == null)
+                .Select(x => x.Key)
+                .ToArray();
+            foreach (int k in keysToRemove)
+            {
+                SaveKeys.Remove(k);
+            }
+            
+            const int iterations = 1000;
+            for (int i = 0; i < iterations; i++)
+            {
+                if (_randomizedSaveKey == 0) 
+                    OnValidate();
+
+                if (SaveKeys.TryGetValue(_randomizedSaveKey, out AudioPlayer existing))
+                {
+                    if (existing == this) 
+                        return;
+
+                    string existingName = existing != null ? existing.name : "Unknown";
+                    
+                    Debug.LogError($"Found conflicting save keys between Audio Player `{existingName}` and `{name}`. Resolving the conflict by changing save key of {name}");
+                    _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
+                    continue;
+                }
+
+                SaveKeys.Add(_randomizedSaveKey, this);
+
+                break;
+            }
         }
 #endif
 
         private void LoadParameters()
         {
+#if UNITY_EDITOR
+            CheckSaveKeyConflict();
+#endif
+            // We check isEditor this way to make it easier to develop non-editor code. 
+            // If you put the rest of the code in #else intellisense will not work.
             if (Application.isEditor)
                 return;
 
@@ -448,6 +498,11 @@ namespace Audoty
 
         private void SaveParameters()
         {
+#if UNITY_EDITOR
+            CheckSaveKeyConflict();
+#endif
+            // We check isEditor this way to make it easier to develop non-editor code. 
+            // If you put the rest of the code in #else intellisense will not work.
             if (Application.isEditor)
                 return;
 
