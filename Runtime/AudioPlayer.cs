@@ -37,8 +37,7 @@ namespace Audoty
         private bool _singleton;
 
         [SerializeField, BoxGroup("Parameters"), ShowIf(nameof(_singleton))]
-        [Tooltip(
-            "When true, a live singleton audio source will be interrupted to play a new clip (from the same Audio Player)")]
+        [Tooltip("When true, a live singleton audio source will be interrupted to play a new clip (from the same Audio Player)")]
         private bool _allowInterrupt = true;
 
         [SerializeField, BoxGroup("Parameters")]
@@ -77,14 +76,20 @@ namespace Audoty
         [SerializeField, BoxGroup("Parameters")]
         private bool _savePitch;
 
+        [Space]
+        [SerializeField, BoxGroup("Parameters")]
+        [Tooltip("Volume fade-in time when AudioPlayer plays an audio")]
+        private float _playFadeTime;
+
+        [SerializeField, BoxGroup("Parameters")]
+        [Tooltip("When AudioPlayer gets interrupted (stopped mid playing), instead of cutting the audio, audio will fade out")]
+        private float _interruptFadeTime = 0.2f;
+
         [SerializeField, HideInInspector] private int _randomizedSaveKey;
 
         private static readonly Queue<AudioSource> Pool = new Queue<AudioSource>();
         private readonly Dictionary<int, AudioSource> _playingSources = new Dictionary<int, AudioSource>();
 
-#if !USE_UNITASK
-        private CoroutineRunner _coroutineRunner;
-#endif
         private int _nextId;
         private Handle? _singletonHandle;
 
@@ -179,7 +184,26 @@ namespace Audoty
             set => _allowInterrupt = value;
         }
 
+        /// <summary>
+        /// Volume fade-in time when AudioPlayer plays an audio
+        /// </summary>
+        public float PlayFadeTime
+        {
+            get => _playFadeTime;
+            set => _playFadeTime = value;
+        }
+
+        /// <summary>
+        /// When AudioPlayer gets interrupted (stopped mid playing), instead of cutting the audio, audio will fade out
+        /// </summary>
+        public float InterruptFadeTime
+        {
+            get => _interruptFadeTime;
+            set => _interruptFadeTime = value;
+        }
+
 #if UNITY_EDITOR
+        internal string[] ClipNames => _clips?.Select(x => x.name).ToArray();
         private bool ShowStopButton => _lastPlayedAudio != null && _lastPlayedAudio.Value.IsPlaying();
 #endif
 
@@ -235,16 +259,28 @@ namespace Audoty
             LoadParameters();
         }
 
+        private void OnDisable()
+        {
+#if UNITY_EDITOR
+            int[] keys = _playingSources.Keys.ToArray();
+            foreach (int id in keys)
+            {
+                Stop(id, 0);
+            }
+#endif
+        }
 
         /// <summary>
         /// Plays a random clip Fire & Forget style
         /// </summary>
         [Button("Play Random", ButtonSizes.Large)]
 #if !USE_UNITASK && !USE_EDITOR_COROUTINES
-        [InfoBox("In order to return Audio Sources to pool in Edit Mode, you need to install UniTask or Editor Coroutines package.\n(There will be no problems in play mode)", InfoMessageType.Error, VisibleIf
- = "@UnityEngine.Application.isPlaying == false")]
+        [InfoBox(
+            "In order to return Audio Sources to pool in Edit Mode, you need to install UniTask or Editor Coroutines package.\n" +
+            "(There will be no problems in play mode)",
+            InfoMessageType.Error,
+            VisibleIf = "@UnityEngine.Application.isPlaying == false")]
 #endif
-        [HideIf("ShowStopButton")]
         public void PlayForget()
         {
             Play();
@@ -254,14 +290,21 @@ namespace Audoty
         /// Plays a specific clip Fire & Forget style
         /// </summary>
         /// <param name="index"></param>
-        [Button("Play Specific", ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
-        [HideIf("ShowStopButton")]
         public void PlayForget(int index)
         {
             Play(index);
         }
 
-        public void PlayForget(string clipName)
+        /// <summary>
+        /// Finds and Plays a clip by clip name in Fire & Forget style
+        /// </summary>
+        /// <param name="clipName"></param>
+        [Button("Play Specific", ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
+        public void PlayForget(
+#if UNITY_EDITOR
+            [ValueDropdown(nameof(ClipNames))]
+#endif
+            string clipName)
         {
             Play(clipName);
         }
@@ -352,15 +395,28 @@ namespace Audoty
 #else
 #if USE_EDITOR_COROUTINES && UNITY_EDITOR
                 if (Application.isPlaying)
-                    RunCoroutine(DespawnAfter(id, clip.length));
+                    CoroutineRunner.RunCoroutine(DespawnAfter(id, clip.length));
                 else
                     EditorCoroutineUtility.StartCoroutine(DespawnAfter(id, clip.length), this);
 #else
-                RunCoroutine(DespawnAfter(id, clip.length));
+                CoroutineRunner.RunCoroutine(DespawnAfter(id, clip.length));
 #endif
 
 #endif
             }
+
+#if USE_UNITASK
+            FadeIn(audioSource, audioSource.volume, _playFadeTime).Forget();
+#else
+#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+            if (Application.isPlaying)
+                CoroutineRunner.RunCoroutine(FadeIn(audioSource, audioSource.volume, _playFadeTime));
+            else
+                EditorCoroutineUtility.StartCoroutine(FadeIn(audioSource, audioSource.volume, _playFadeTime), this);
+#else
+            CoroutineRunner.RunCoroutine(FadeIn(audioSource, audioSource.volume, _playFadeTime));
+#endif
+#endif
 
             _playingSources.Add(id, audioSource);
 
@@ -385,14 +441,22 @@ namespace Audoty
         }
 #endif
 
-        private bool Stop(int id)
+        private bool Stop(int id, float fadeTime)
         {
             if (_playingSources.TryGetValue(id, out AudioSource source))
             {
                 if (source != null)
                 {
-                    source.Stop();
-                    Pool.Enqueue(source);
+#if USE_UNITASK
+                    FadeOut(source, fadeTime).Forget();
+#elif USE_EDITOR_COROUTINES && UNITY_EDITOR
+                    if (!Application.isPlaying)
+                        EditorCoroutineUtility.StartCoroutine(FadeOut(source, fadeTime), this);
+                    else
+                        CoroutineRunner.RunCoroutine(FadeOut(source, fadeTime));
+#else
+                    CoroutineRunner.RunCoroutine(FadeOut(source, fadeTime));
+#endif
                 }
 
                 _playingSources.Remove(id);
@@ -400,6 +464,67 @@ namespace Audoty
             }
 
             return false;
+        }
+
+        private static
+#if USE_UNITASK
+            async UniTask
+#else
+            IEnumerator
+#endif
+            FadeIn(AudioSource source, float volume, float fadeTime)
+        {
+            if (fadeTime > 0)
+            {
+                float startTime = Time.time;
+
+                source.volume = 0;
+                float stepPerSecond = volume / fadeTime;
+
+                while (source.volume < volume && Time.time - startTime < fadeTime)
+                {
+                    source.volume += stepPerSecond * Time.deltaTime;
+#if USE_UNITASK
+                    // Only Yield works here because in Editor mode we don't have frames
+                    await UniTask.Yield();
+#else
+                    yield return null;
+#endif
+                }
+            }
+
+            source.volume = volume;
+        }
+
+        private static
+#if USE_UNITASK
+            async UniTask
+#else
+            IEnumerator
+#endif
+            FadeOut(AudioSource source, float fadeTime)
+        {
+            if (fadeTime > 0)
+            {
+                float startTime = Time.time;
+
+                float stepPerSecond = source.volume / fadeTime;
+
+                while (source.volume >= 0.05f && Time.time - startTime < fadeTime)
+                {
+                    source.volume -= stepPerSecond * Time.deltaTime;
+
+#if USE_UNITASK
+                    // Only Yield works here because in Editor mode we don't have frames
+                    await UniTask.Yield();
+#else
+                    yield return null;
+#endif
+                }
+            }
+
+            source.Stop();
+            Pool.Enqueue(source);
         }
 
         private AudioSource Spawn(Vector3? position)
@@ -452,22 +577,9 @@ namespace Audoty
         private async UniTask DespawnAfter(int id, float time)
         {
             await UniTask.Delay((int) (time * 1000));
-            Stop(id);
+            Stop(id, 0);
         }
 #else
-        private void RunCoroutine(IEnumerator coroutine)
-        {
-            if (_coroutineRunner == null)
-            {
-                _coroutineRunner = new GameObject("Coroutine Runner", typeof(CoroutineRunner))
-                {
-                    hideFlags = HideFlags.HideAndDontSave
-                }.GetComponent<CoroutineRunner>();
-            }
-
-            _coroutineRunner.StartCoroutine(coroutine);
-        }
-
         private IEnumerator DespawnAfter(int id, float time)
         {
 #if USE_EDITOR_COROUTINES && UNITY_EDITOR
@@ -482,7 +594,7 @@ namespace Audoty
 #else
             yield return new WaitForSeconds(time);
 #endif
-            Stop(id);
+            Stop(id, 0);
         }
 #endif
 
@@ -633,7 +745,7 @@ namespace Audoty
                 {
                     if (source == null)
                     {
-                        _player.Stop(_id);
+                        _player.Stop(_id, 0);
                         return false;
                     }
 
@@ -644,7 +756,7 @@ namespace Audoty
             }
 
             /// <summary>
-            /// Stops audio player 
+            /// Stops audio player. If audio player is playing, audio will be faded out with InterruptFadeTime in AudioPlayer
             /// </summary>
             /// <returns>true if clip stops, false if clip was already stopped</returns>
             public bool Stop()
@@ -652,7 +764,19 @@ namespace Audoty
                 if (_player == null)
                     return false;
 
-                return _player.Stop(_id);
+                return _player.Stop(_id, _player._interruptFadeTime);
+            }
+
+            /// <summary>
+            /// Stops audio player. If audio player is playing, audio will be faded out using the given parameter
+            /// </summary>
+            /// <returns>true if clip stops, false if clip was already stopped</returns>
+            public bool Stop(float fadeOutTime)
+            {
+                if (_player == null)
+                    return false;
+
+                return _player.Stop(_id, fadeOutTime);
             }
         }
     }

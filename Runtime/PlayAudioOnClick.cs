@@ -9,14 +9,8 @@ namespace Audoty
     /// Plays an AudioPlayer when receives OnPointerClick callback.
     /// It will not play the AudioPlayer if it's attached to a Selectable component which is not interactable or disabled. 
     /// </summary>
-    public class PlayAudioOnClick : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
+    public class PlayAudioOnClick : ScenePlayerBase, IPointerClickHandler, IPointerDownHandler
     {
-        [SerializeField] private AudioPlayer _audio;
-        [SerializeField] private bool _useRandomClip = true;
-
-        [SerializeField, HideIf(nameof(_useRandomClip))]
-        private int _clipIndex;
-
         private Selectable _selectable;
         private bool _play;
 
@@ -27,11 +21,26 @@ namespace Audoty
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (_play)
+            if (!_play) return;
+
+            if (Audio == null)
             {
-                int index = _useRandomClip ? Random.Range(0, _audio.Clips.Count) : _clipIndex;
-                _audio.PlayForget(index);
+                Debug.LogError("PlayAudioOnClick does not have AudioPlayer assigned.", this);
+                return;
             }
+
+            if (Audio.Clips.Count == 0)
+                return;
+
+            int index = UseRandomClip ? Random.Range(0, Audio.Clips.Count) : ClipIndex;
+
+            if (index == -1)
+            {
+                Debug.LogError("No clip is selected in PlayAudioOnClick", this);
+                return;
+            }
+
+            Audio.PlayForget(index);
         }
 
         public void OnPointerDown(PointerEventData eventData)
