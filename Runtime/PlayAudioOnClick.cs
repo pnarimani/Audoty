@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -11,6 +12,10 @@ namespace Audoty
     public class PlayAudioOnClick : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     {
         [SerializeField] private AudioPlayer _audio;
+        [SerializeField] private bool _useRandomClip = true;
+
+        [SerializeField, HideIf(nameof(_useRandomClip))]
+        private int _clipIndex;
 
         private Selectable _selectable;
         private bool _play;
@@ -23,7 +28,10 @@ namespace Audoty
         public void OnPointerClick(PointerEventData eventData)
         {
             if (_play)
-                _audio.PlayForget();
+            {
+                int index = _useRandomClip ? Random.Range(0, _audio.Clips.Count) : _clipIndex;
+                _audio.PlayForget(index);
+            }
         }
 
         public void OnPointerDown(PointerEventData eventData)

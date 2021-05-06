@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Audoty
@@ -11,6 +12,10 @@ namespace Audoty
         [SerializeField]
         private Transform _targetPosition;
 
+        [SerializeField] private bool _useRandomClip = true;
+
+        [SerializeField, HideIf(nameof(_useRandomClip))] private int _clipIndex;
+        
         [SerializeField] private AudioPlayer _audio;
 
         private AudioPlayer.Handle _handle;
@@ -20,7 +25,9 @@ namespace Audoty
             if (_audio == null)
                 return;
 
-            _handle = _targetPosition != null ? _audio.Play(_targetPosition.position) : _audio.Play();
+            Vector3? pos = _targetPosition != null ? _targetPosition.position : (Vector3?) null;
+            int index = _useRandomClip ? Random.Range(0, _audio.Clips.Count) : _clipIndex;
+            _handle = _audio.Play(index, pos);
         }
 
         private void OnDisable()
