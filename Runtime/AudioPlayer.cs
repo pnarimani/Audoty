@@ -428,6 +428,8 @@ namespace Audoty
                 _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
             
             CheckSaveKeyConflict();
+            
+            ReconfigurePlayingAudioSources();
         }
 
         private void CheckSaveKeyConflict()
