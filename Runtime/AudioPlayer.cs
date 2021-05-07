@@ -327,18 +327,31 @@ namespace Audoty
 
         /// <summary>
         /// Finds and plays a given clip, optionally at a position, and returns a handle which can be used to stop the clip.
+        /// If clipName is not given, a random clip will be chosen.
         /// If position or tracking is provided, audio will be 3D, otherwise, audio will be played 2D 
         /// </summary>
         /// <param name="clipName">The name of clip to play</param>
         /// <param name="position">Position to play the clip at.</param>
         /// <param name="tracking">Audio player will be attached to this transform</param>
         /// <returns></returns>
-        public AudioHandle Play(string clipName, Vector3? position = null, Transform tracking = null)
+        public AudioHandle Play(string clipName = null, Vector3? position = null, Transform tracking = null)
         {
-            int index = FindIndex(clipName);
+            if (_clips.Count == 0)
+                throw new NoClipsFoundException(this);
+            
+            int index;
+            
+            if (string.IsNullOrEmpty(clipName))
+            {
+                index = Random.Range(0, _clips.Count);
+            }
+            else
+            {
+                index = FindIndex(clipName);
 
-            if (index == -1)
-                throw new ClipNotFoundException(this, clipName);
+                if (index == -1)
+                    throw new ClipNotFoundException(this, clipName);
+            }
 
             return Play(index, position, tracking);
         }
@@ -353,6 +366,9 @@ namespace Audoty
         /// <returns></returns>
         public AudioHandle Play(int index, Vector3? position = null, Transform tracking = null)
         {
+            if (_clips.Count == 0)
+                throw new NoClipsFoundException(this);
+            
 #if UNITY_EDITOR
             CheckSaveKeyConflict();
 #endif
