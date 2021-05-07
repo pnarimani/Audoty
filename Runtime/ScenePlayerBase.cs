@@ -8,18 +8,17 @@ namespace Audoty
     {
         [SerializeField] private AudioPlayer _audio;
         [SerializeField] private bool _useRandomClip = true;
-        
+
         [HideIf(nameof(UseRandomClip))]
         [ValueDropdown("@_audio == null ? new string[0] : _audio.ClipNames")]
         [SerializeField]
         private string _clipName;
 
-        [SerializeField, HideInInspector] 
-        private int _clipIndex;
+        [SerializeField, HideInInspector] private int _clipIndex;
 
         protected AudioPlayer Audio => _audio;
 
-        protected  int ClipIndex => _clipIndex;
+        protected int ClipIndex => _clipIndex;
 
         protected bool UseRandomClip => _useRandomClip;
 
@@ -32,11 +31,11 @@ namespace Audoty
                 _clipIndex = -1;
                 return;
             }
-            
+
             if (string.IsNullOrEmpty(_clipName))
                 _clipIndex = -1;
             else
-                _clipIndex = Audio.Clips.FindIndex(x => x.name == _clipName);
+                _clipIndex = Audio.FindIndex(_clipName);
         }
 #endif
     }

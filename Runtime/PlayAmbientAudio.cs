@@ -7,13 +7,13 @@ namespace Audoty
     /// </summary>
     public class PlayAmbientAudio : ScenePlayerBase
     {
-        [Tooltip("If target position is provided, audio will be played in 3D, otherwise audio will be played in 2D")]
+        [Tooltip("If tracking target is provided, audio will be played in 3D, otherwise audio will be played in 2D")]
         [SerializeField]
-        private Transform _targetPosition;
+        private Transform _trackingTarget;
         
         [SerializeField] private bool _stopOnDisable = true;
 
-        private AudioPlayer.Handle _handle;
+        private AudioHandle _handle;
 
         private void OnEnable()
         {
@@ -26,7 +26,6 @@ namespace Audoty
             if (Audio.Clips.Count == 0)
                 return;
 
-            Vector3? pos = _targetPosition != null ? _targetPosition.position : (Vector3?) null;
             int index = UseRandomClip ? Random.Range(0, Audio.Clips.Count) : ClipIndex;
 
             if (index == -1)
@@ -34,8 +33,8 @@ namespace Audoty
                 Debug.LogError("No clip is selected in PlayAmbientAudio", this);
                 return;
             }
-            
-            _handle = Audio.Play(index, pos);
+
+            _handle = Audio.Play(index, tracking: _trackingTarget);
         }
 
         private void OnDisable()
