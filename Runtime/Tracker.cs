@@ -20,5 +20,10 @@ namespace Audoty
             if (_source.isPlaying && Target != null)
                 transform.position = Target.position + Offset;
         }
+
+        private void OnDisable()
+        {
+            Target = null;
+        }
     }
 }
