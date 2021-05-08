@@ -104,7 +104,7 @@ namespace Audoty
             if (source != null)
             {
                 source.Stop();
-                AudioPool.Pool.Enqueue(source);
+                AudioPool.Despawn(source);
             }
         }
     }

@@ -332,7 +332,7 @@ namespace Audoty
         /// </summary>
         /// <param name="clipName">The name of clip to play</param>
         /// <param name="position">Position to play the clip at.</param>
-        /// <param name="tracking">Audio player will be attached to this transform</param>
+        /// <param name="tracking">Audio player will track this transform's movement</param>
         /// <returns></returns>
         public AudioHandle Play(string clipName = null, Vector3? position = null, Transform tracking = null)
         {
@@ -358,11 +358,11 @@ namespace Audoty
 
         /// <summary>
         /// Plays a given clip, optionally at a position, and returns a handle which can be used to stop the clip.
-        /// If position or tracking is provided, audio will be 3D, otherwise, audio will be played 2D 
+        /// If position or tracking is provided, audio will be 3D, otherwise, audio will be played 2D.
         /// </summary>
         /// <param name="index">The index of the clip to play</param>
         /// <param name="position">Position to play the clip at.</param>
-        /// <param name="tracking">Audio player will be attached to this transform</param>
+        /// <param name="tracking">Audio player will track this transform's movement</param>
         /// <returns></returns>
         public AudioHandle Play(int index, Vector3? position = null, Transform tracking = null)
         {
