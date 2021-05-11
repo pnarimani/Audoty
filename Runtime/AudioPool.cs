@@ -59,6 +59,8 @@ namespace Audoty
             if (source != null)
             {
                 source.Stop();
+                // It is necessary to set the clip to null or the AudioSource delay will not work for some fucked up reason.
+                source.clip = null;
                 source.gameObject.SetActive(false);
                 Pool.Enqueue(source);
             }
