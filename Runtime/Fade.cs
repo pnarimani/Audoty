@@ -1,5 +1,6 @@
 using UnityEngine;
 #if USE_UNITASK
+using System;
 using Cysharp.Threading.Tasks;
 #else
 using System.Collections;
@@ -13,18 +14,18 @@ namespace Audoty
 {
     internal static class Fade
     {
-        public static void In(AudioSource source, float volume, float fadeTime)
+        public static void In(AudioSource source, float volume, float fadeTime, float delay)
         {
 #if USE_UNITASK
-            InInternal(source, volume, fadeTime).Forget();
+            InInternal(source, volume, fadeTime, delay).Forget();
 #else
 #if USE_EDITOR_COROUTINES && UNITY_EDITOR
             if (Application.isPlaying)
-                CoroutineRunner.RunCoroutine(InInternal(source, volume, fadeTime));
+                CoroutineRunner.RunCoroutine(InInternal(source, volume, fadeTime, delay));
             else
-                EditorCoroutineUtility.StartCoroutineOwnerless(InInternal(source, volume, fadeTime));
+                EditorCoroutineUtility.StartCoroutineOwnerless(InInternal(source, volume, fadeTime, delay));
 #else
-            CoroutineRunner.RunCoroutine(InInternal(source, volume, fadeTime));
+            CoroutineRunner.RunCoroutine(InInternal(source, volume, fadeTime, delay));
 #endif
 #endif
         }
@@ -39,7 +40,7 @@ namespace Audoty
             else
                 CoroutineRunner.RunCoroutine(OutInternal(source, fadeTime));
 #else
-                    CoroutineRunner.RunCoroutine(OutInternal(source, fadeTime));
+            CoroutineRunner.RunCoroutine(OutInternal(source, fadeTime));
 #endif
         }
 
@@ -49,8 +50,17 @@ namespace Audoty
 #else
             IEnumerator
 #endif
-            InInternal(AudioSource source, float volume, float fadeTime)
+            InInternal(AudioSource source, float volume, float fadeTime, float delay)
         {
+            if (delay > 0)
+            {
+#if USE_UNITASK
+                await UniTask.Delay(TimeSpan.FromSeconds(delay), DelayType.Realtime);
+#else
+                yield return new WaitForSeconds(delay);
+#endif
+            }
+
             if (fadeTime > 0)
             {
                 float startTime = Time.time;

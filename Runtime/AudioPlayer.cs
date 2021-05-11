@@ -333,14 +333,15 @@ namespace Audoty
         /// <param name="clipName">The name of clip to play</param>
         /// <param name="position">Position to play the clip at.</param>
         /// <param name="tracking">Audio player will track this transform's movement</param>
+        /// <param name="delay">Delay in seconds before AudioPlayer actually plays the audio. AudioPlayers in delay are considered playing/live</param>
         /// <returns></returns>
-        public AudioHandle Play(string clipName = null, Vector3? position = null, Transform tracking = null)
+        public AudioHandle Play(string clipName = null, Vector3? position = null, Transform tracking = null, float delay = 0)
         {
             if (_clips.Count == 0)
                 throw new NoClipsFoundException(this);
-            
+
             int index;
-            
+
             if (string.IsNullOrEmpty(clipName))
             {
                 index = Random.Range(0, _clips.Count);
@@ -353,7 +354,7 @@ namespace Audoty
                     throw new ClipNotFoundException(this, clipName);
             }
 
-            return Play(index, position, tracking);
+            return Play(index, position, tracking, delay);
         }
 
         /// <summary>
@@ -363,12 +364,13 @@ namespace Audoty
         /// <param name="index">The index of the clip to play</param>
         /// <param name="position">Position to play the clip at.</param>
         /// <param name="tracking">Audio player will track this transform's movement</param>
+        /// <param name="delay">Delay in seconds before AudioPlayer actually plays the audio. AudioPlayers in delay are considered playing/live</param>
         /// <returns></returns>
-        public AudioHandle Play(int index, Vector3? position = null, Transform tracking = null)
+        public AudioHandle Play(int index, Vector3? position = null, Transform tracking = null, float delay = 0)
         {
             if (_clips.Count == 0)
                 throw new NoClipsFoundException(this);
-            
+
 #if UNITY_EDITOR
             CheckSaveKeyConflict();
 #endif
@@ -396,9 +398,12 @@ namespace Audoty
 
             ConfigureParameters(audioSource, false);
             audioSource.clip = clip;
-            audioSource.Play();
+            if (delay <= 0)
+                audioSource.Play();
+            else
+                audioSource.PlayDelayed(delay);
 
-            Fade.In(audioSource, audioSource.volume, _playFadeTime);
+            Fade.In(audioSource, audioSource.volume, _playFadeTime, delay);
 
             _playingSources.Add(id, audioSource);
 
