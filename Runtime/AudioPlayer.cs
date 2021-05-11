@@ -394,7 +394,7 @@ namespace Audoty
             _nextId++;
             var handle = new AudioHandle(this, id, index);
 
-            AudioSource audioSource = AudioPool.Spawn(handle, position, tracking, _loop ? -1 : clip.length);
+            AudioSource audioSource = AudioPool.Spawn(handle, position, tracking, _loop ? -1 : (clip.length + delay));
 
             ConfigureParameters(audioSource, false);
             audioSource.clip = clip;
