@@ -15,11 +15,15 @@ Audoty does not require any packages to function in Play Mode.
 
 However, There are some requirements for Edit Mode.
 
-If you want to play/test audio in Edit Mode, you need one of these packages:
+If you want to play/test audio in Edit Mode, you need one of these packages for async handling:
 * [UniTask](https://github.com/Cysharp/UniTask.git)
-* [Editor Coroutines]()
+* [Editor Coroutines](https://docs.unity3d.com/Packages/com.unity.editorcoroutines@0.0/manual/index.html)
 
-Currently, Audoty is using Odin Inspector to draw the inspector. This depenency will be removed (or replaced with NaughtyAttributes) in future.
+And one of these package for drawing inspector:
+* [Odin Inspector](https://odininspector.com/)
+* [Naughty Attributes](https://github.com/dbrizov/NaughtyAttributes.git)
+
+**Audoty works best with Odin Inspector and UniTask**
 
 ## Creating Audio Player
 Creating a new audio player is simple. Right click somewhere in project window, and select `Create/Audio Player` from the context menu.

@@ -1,6 +1,11 @@
-using System;
-using Sirenix.OdinInspector;
 using UnityEngine;
+
+#if ODIN_INSPECTOR
+using Sirenix.OdinInspector;
+#elif NAUGHTY_ATTRIBUTES
+using NaughtyAttributes;
+using ValueDropdown = NaughtyAttributes.DropdownAttribute;
+#endif
 
 namespace Audoty
 {
@@ -9,19 +14,23 @@ namespace Audoty
         [SerializeField] private AudioPlayer _audio;
         [SerializeField] private bool _useRandomClip = true;
 
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
         [HideIf(nameof(UseRandomClip))]
-        [ValueDropdown("@_audio == null ? new string[0] : _audio.ClipNames")]
+        [ValueDropdown(nameof(ClipNames))]
+#endif
         [SerializeField]
         private string _clipName;
 
         [SerializeField, HideInInspector] private int _clipIndex;
-
+        
         protected AudioPlayer Audio => _audio;
 
         protected int ClipIndex => _clipIndex;
 
         protected bool UseRandomClip => _useRandomClip;
 
+        private string[] ClipNames => _audio == null ? new string[0] : _audio.ClipNames;
+        
 #if UNITY_EDITOR
         private void OnValidate()
         {

@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-#if USE_UNITASK
+#if UNITASK
 using Cysharp.Threading.Tasks;
 #else
 using System.Collections;
 #endif
-#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+#if EDITOR_COROUTINES && UNITY_EDITOR
 using Unity.EditorCoroutines.Editor;
 
 #endif
@@ -69,10 +69,10 @@ namespace Audoty
         private static void StopAfter(AudioHandle handle, float time)
         {
             // Select despawn strategy based on what packages are present
-#if USE_UNITASK
+#if UNITASK
             StopAfterInternal(handle, time).Forget();
 #else
-#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+#if EDITOR_COROUTINES && UNITY_EDITOR
                 if (Application.isPlaying)
                     CoroutineRunner.RunCoroutine(StopAfterInternal(handle, time));
                 else
@@ -84,7 +84,7 @@ namespace Audoty
 #endif
         }
 
-#if USE_UNITASK
+#if UNITASK
         private static async UniTask StopAfterInternal(AudioHandle handle, float time)
         {
             await UniTask.Delay((int) (time * 1000));
@@ -93,7 +93,7 @@ namespace Audoty
 #else
         private static IEnumerator StopAfterInternal(AudioHandle handle, float time)
         {
-#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+#if EDITOR_COROUTINES && UNITY_EDITOR
             if (!Application.isPlaying)
                 yield return new EditorWaitForSeconds(time);
             else

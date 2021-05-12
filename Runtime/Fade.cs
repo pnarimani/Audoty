@@ -1,11 +1,11 @@
 using UnityEngine;
-#if USE_UNITASK
+#if UNITASK
 using System;
 using Cysharp.Threading.Tasks;
 #else
 using System.Collections;
 #endif
-#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+#if EDITOR_COROUTINES && UNITY_EDITOR
 using Unity.EditorCoroutines.Editor;
 
 #endif
@@ -16,10 +16,10 @@ namespace Audoty
     {
         public static void In(AudioSource source, float volume, float fadeTime, float delay)
         {
-#if USE_UNITASK
+#if UNITASK
             InInternal(source, volume, fadeTime, delay).Forget();
 #else
-#if USE_EDITOR_COROUTINES && UNITY_EDITOR
+#if EDITOR_COROUTINES && UNITY_EDITOR
             if (Application.isPlaying)
                 CoroutineRunner.RunCoroutine(InInternal(source, volume, fadeTime, delay));
             else
@@ -32,9 +32,9 @@ namespace Audoty
 
         public static void Out(AudioSource source, float fadeTime)
         {
-#if USE_UNITASK
+#if UNITASK
             OutInternal(source, fadeTime).Forget();
-#elif USE_EDITOR_COROUTINES && UNITY_EDITOR
+#elif EDITOR_COROUTINES && UNITY_EDITOR
             if (!Application.isPlaying)
                 EditorCoroutineUtility.StartCoroutineOwnerless(OutInternal(source, fadeTime));
             else
@@ -45,7 +45,7 @@ namespace Audoty
         }
 
         private static
-#if USE_UNITASK
+#if UNITASK
             async UniTask
 #else
             IEnumerator
@@ -54,7 +54,7 @@ namespace Audoty
         {
             if (delay > 0)
             {
-#if USE_UNITASK
+#if UNITASK
                 await UniTask.Delay(TimeSpan.FromSeconds(delay), DelayType.Realtime);
 #else
                 yield return new WaitForSeconds(delay);
@@ -71,7 +71,7 @@ namespace Audoty
                 while (source != null && source.volume < volume && Time.time - startTime < fadeTime)
                 {
                     source.volume += stepPerSecond * Time.deltaTime;
-#if USE_UNITASK
+#if UNITASK
                     // Only Yield works here because in Editor mode we don't have frames
                     await UniTask.Yield();
 #else
@@ -85,7 +85,7 @@ namespace Audoty
         }
 
         private static
-#if USE_UNITASK
+#if UNITASK
             async UniTask
 #else
             IEnumerator
@@ -102,7 +102,7 @@ namespace Audoty
                 {
                     source.volume -= stepPerSecond * Time.deltaTime;
 
-#if USE_UNITASK
+#if UNITASK
                     // Only Yield works here because in Editor mode we don't have frames
                     await UniTask.Yield();
 #else

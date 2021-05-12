@@ -1,90 +1,159 @@
 using System.Collections.Generic;
 using System.Linq;
-using Sirenix.OdinInspector;
 using UnityEngine;
+
+#if ODIN_INSPECTOR
+using Sirenix.OdinInspector;
+#elif NAUGHTY_ATTRIBUTES
+using NaughtyAttributes;
+#endif
 
 namespace Audoty
 {
     [CreateAssetMenu(fileName = "Audio Player", menuName = "Audio Player", order = 215)]
     public class AudioPlayer : ScriptableObject
     {
+#if !ODIN_INSPECTOR && NAUGHTY_ATTRIBUTES
+        [ReorderableList]
+#endif
         [SerializeField] private List<AudioClip> _clips;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private bool _loop;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField] 
         [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
         private bool _liveLinkLoop = true;
-
-        [SerializeField, BoxGroup("Parameters")]
+        
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private bool _saveLoop;
 
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
         [SerializeField]
         [Space]
-        [BoxGroup("Parameters")]
         [Tooltip("When true, only one instance of this AudioPlayer will be played")]
         private bool _singleton;
 
-        [SerializeField, BoxGroup("Parameters"), ShowIf(nameof(_singleton))]
-        [Tooltip(
-            "When true, a live singleton audio source will be interrupted to play a new clip (from the same Audio Player)")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+        [ShowIf(nameof(_singleton))]
+#endif
+        [SerializeField]
+        [Tooltip("When true, a live singleton audio source will be interrupted to play a new clip (from the same Audio Player)")]
         private bool _allowInterrupt = true;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private bool _saveSingelton;
 
-        [Space] [SerializeField, Range(0, 1), BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [Space]
+        [SerializeField] 
+        [Range(0, 1)]
         private float _volume = 1;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
         private bool _liveLinkVolume = true;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private bool _saveVolume;
 
-        [Space] [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [Space] [SerializeField]
         private float _minDistance = 1;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private float _maxDistance = 500;
 
-        [SerializeField, BoxGroup("Parameters")]
-        [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField] [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
         private bool _liveLinkDistances = true;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private bool _saveDistances;
 
-        [Space] [SerializeField, MinMaxSlider(-3, 3), BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+        [MinMaxSlider(-3, 3)]
+#endif
+        [Space]
+        [SerializeField]
         private Vector2 _pitch = Vector2.one;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
         private bool _liveLinkPitch = true;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private bool _savePitch;
 
-        [Space] [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [Space] [SerializeField]
         private float _dopplerLevel;
 
-        [SerializeField, BoxGroup("Parameters")]
-        [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField] [Tooltip("When live link is enabled, changes to the parameter will apply to existing/live audio sources.")]
         private bool _liveLinkDopplerLevel = true;
 
-        [SerializeField, BoxGroup("Parameters")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
         private bool _saveDopplerLevel;
 
-        [Space]
-        [SerializeField, BoxGroup("Parameters")]
-        [Tooltip("Volume fade-in time when AudioPlayer plays an audio")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [Space] [SerializeField] [Tooltip("Volume fade-in time when AudioPlayer plays an audio")]
         private float _playFadeTime;
 
-        [SerializeField, BoxGroup("Parameters")]
-        [Tooltip(
-            "When AudioPlayer gets interrupted (stopped mid playing), instead of cutting the audio, audio will fade out")]
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
+        [Tooltip("When AudioPlayer gets interrupted (stopped mid playing), instead of cutting the audio, audio will fade out")]
         private float _interruptFadeTime = 0.2f;
 
         [SerializeField, HideInInspector] private int _randomizedSaveKey;
@@ -284,8 +353,12 @@ namespace Audoty
         /// <summary>
         /// Plays a random clip Fire & Forget style
         /// </summary>
+#if ODIN_INSPECTOR
         [Button("Play Random", ButtonSizes.Large)]
-#if !USE_UNITASK && !USE_EDITOR_COROUTINES
+#elif NAUGHTY_ATTRIBUTES
+        [Button("Play Random")]
+#endif
+#if !UNITASK && !EDITOR_COROUTINES && (ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES)
         [InfoBox(
             "You need to install UniTask or Editor Coroutines package to use AudioPlayer in Edit Mode.\n" +
             "(There will be no problems in play mode)",
@@ -306,12 +379,28 @@ namespace Audoty
             Play(index);
         }
 
+
+#if !ODIN_INSPECTOR && NAUGHTY_ATTRIBUTES && UNITY_EDITOR
+        // Naughty Attributes doesn't support method with parameters
+        [SerializeField, BoxGroup("Specific Clip Name")] private string _specificClipParameter;
+        [Button("Play Specific")]
+        private void PlaySpecific()
+        {
+            PlayForget(_specificClipParameter);
+        }
+#endif
         /// <summary>
         /// Finds and Plays a clip by clip name in Fire & Forget style
         /// </summary>
         /// <param name="clipName"></param>
+#if ODIN_INSPECTOR
         [Button("Play Specific", ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
-        public void PlayForget([ValueDropdown("ClipNames")] string clipName)
+#endif
+        public void PlayForget(
+#if ODIN_INSPECTOR
+            [ValueDropdown("ClipNames")]
+#endif
+            string clipName)
         {
             Play(clipName);
         }
@@ -418,7 +507,11 @@ namespace Audoty
         }
 
 #if UNITY_EDITOR
+#if ODIN_INSPECTOR
         [Button("Stop", ButtonSizes.Large), ShowIf("ShowStopButton")]
+#elif NAUGHTY_ATTRIBUTES
+        [Button("Stop"), ShowIf("ShowStopButton")]
+#endif
         private void StopLastPlayingClip()
         {
             if (_lastPlayedAudio != null)

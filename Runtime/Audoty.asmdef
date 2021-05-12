@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "UniTask",
-        "Unity.EditorCoroutines.Editor"
+        "Unity.EditorCoroutines.Editor",
+        "NaughtyAttributes.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -16,12 +17,17 @@
         {
             "name": "com.cysharp.unitask",
             "expression": "",
-            "define": "USE_UNITASK"
+            "define": "UNITASK"
         },
         {
             "name": "com.unity.editorcoroutines",
             "expression": "",
-            "define": "USE_EDITOR_COROUTINES"
+            "define": "EDITOR_COROUTINES"
+        },
+        {
+            "name": "com.dbrizov.naughtyattributes",
+            "expression": "",
+            "define": "NAUGHTY_ATTRIBUTES"
         }
     ],
     "noEngineReferences": false
