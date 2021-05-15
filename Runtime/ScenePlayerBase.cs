@@ -14,7 +14,7 @@ namespace Audoty
         [SerializeField] private AudioPlayer _audio;
         [SerializeField] private bool _useRandomClip = true;
 
-#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+#if UNITY_EDITOR && (ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES)
         [HideIf(nameof(UseRandomClip))]
         [ValueDropdown(nameof(ClipNames))]
 #endif
@@ -29,9 +29,10 @@ namespace Audoty
 
         protected bool UseRandomClip => _useRandomClip;
 
-        private string[] ClipNames => _audio == null ? new string[0] : _audio.ClipNames;
         
 #if UNITY_EDITOR
+        private string[] ClipNames => _audio == null ? new string[0] : _audio.ClipNames;
+        
         private void OnValidate()
         {
             if (_audio == null)
