@@ -1,20 +1,28 @@
 using UnityEngine;
 
+#if UNITASK
+using System;
+using Cysharp.Threading.Tasks;
+#endif
+
 namespace Audoty
 {
     public readonly struct AudioHandle
     {
         private readonly AudioPlayer _player;
         private readonly int _id;
+        private readonly float _completionTime;
 
         public AudioHandle(AudioPlayer player, int id, int clipIndex)
         {
             ClipIndex = clipIndex;
             _id = id;
             _player = player;
+            _completionTime = Time.time + _player.Clips[clipIndex].length;
         }
-
+        
         public int ClipIndex { get; }
+        public float ClipLength => _player.Clips[ClipIndex].length;
 
         /// <summary>
         /// Returns true if the audio is currently playing
@@ -62,5 +70,15 @@ namespace Audoty
 
             return _player.Stop(_id, fadeOutTime);
         }
+
+#if UNITASK
+        public async UniTask WaitUntilCompletion()
+        {
+            if (_completionTime <= Time.time)
+                return;
+
+            await UniTask.Delay(TimeSpan.FromSeconds(_completionTime - Time.time));
+        }
+#endif
     }
 }
