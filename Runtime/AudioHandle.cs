@@ -77,7 +77,9 @@ namespace Audoty
             if (_completionTime <= Time.time)
                 return;
 
-            await UniTask.Delay(TimeSpan.FromSeconds(_completionTime - Time.time));
+            DelayType type = Application.isPlaying ? DelayType.DeltaTime : DelayType.Realtime;
+            
+            await UniTask.Delay(TimeSpan.FromSeconds(_completionTime - Time.time), type);
         }
 #endif
     }
