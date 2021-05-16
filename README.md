@@ -111,7 +111,12 @@ When a `Transform` is assigned to `TrackingTarget`, audio source will always hav
 `PlayAudioOnClick` is useful when you have an interactable object which will play an audio when user clicks on it.  
 Same as `PlayAmbientAudio`, you can choose a clip by name or enable random selection.
 
-`PlayAudioOnClick` will always play the audio in 2D mode. 
+`PlayAudioOnClick` will always play the audio in 2D mode.
+
+---
+**Even though `PlayAudioOnClick` and `PlayAmbientAudio` ask for "Clip Name" in the inspector, internally they keep a reference to the clip using CLIP INDEX and not CLIP NAME.  
+This allows you to change the clip in AudioPlayer without the need to reconfigure every component in the scene.  
+But the drawback is that you CANNOT reorder the audio clips in an AudioPlayer.**
 
 ## API
 If Utility classes don't suit your needs, you can always use code to play an AudioPlayer.  
