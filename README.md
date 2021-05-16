@@ -174,13 +174,13 @@ public readonly struct AudioHandle
     /// Stops audio player. If audio player is playing, audio will be faded out using the given parameter
     /// </summary>
     /// <returns>true if clip stops, false if clip was already stopped</returns>
-    public bool Stop(float fadeOutTime)
+    public bool Stop(float fadeOutTime);
     
     // Only available when UniTask is present:
     /// <summary>
     /// Waits until the audio has finished playing. This method will return instantly for looping AudioPlayer.
     /// </summary>
-    public UniTask WaitUntilCompletion()
+    public UniTask WaitUntilCompletion();
 }
 ```
 
