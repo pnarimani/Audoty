@@ -276,7 +276,7 @@ namespace Audoty
         }
 
 #if UNITY_EDITOR
-        internal string[] ClipNames => _clips?.Select(x => x.name).ToArray();
+        internal string[] ClipNames { get; private set; }
         private bool ShowStopButton => _lastPlayedAudio != null && _lastPlayedAudio.Value.IsPlaying();
 #endif
 
@@ -336,12 +336,17 @@ namespace Audoty
 
         private void OnEnable()
         {
+#if UNITY_EDITOR
+            ClipNames = _clips?.Select(x => x.name).ToArray();
+#endif
             LoadParameters();
         }
 
         private void OnDisable()
         {
 #if UNITY_EDITOR
+            ClipNames = _clips?.Select(x => x.name).ToArray();
+            
             int[] keys = _playingSources.Keys.ToArray();
             foreach (int id in keys)
             {
@@ -565,6 +570,8 @@ namespace Audoty
 #if UNITY_EDITOR
         private void OnValidate()
         {
+            ClipNames = _clips?.Select(x => x.name).ToArray();
+            
             while (_randomizedSaveKey == 0)
                 _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
 
