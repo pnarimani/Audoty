@@ -162,25 +162,25 @@ public readonly struct AudioHandle
     /// Returns true if the audio is currently playing
     /// </summary>
     /// <returns></returns>
-    public bool IsPlaying();
+    bool IsPlaying();
     
     /// <summary>
     /// Stops audio player. If audio player is playing, audio will be faded out with InterruptFadeTime in AudioPlayer
     /// </summary>
     /// <returns>true if clip stops, false if clip was already stopped</returns>
-    public bool Stop();
+    bool Stop();
     
     /// <summary>
     /// Stops audio player. If audio player is playing, audio will be faded out using the given parameter
     /// </summary>
     /// <returns>true if clip stops, false if clip was already stopped</returns>
-    public bool Stop(float fadeOutTime);
+    bool Stop(float fadeOutTime);
     
     // Only available when UniTask is present:
     /// <summary>
     /// Waits until the audio has finished playing. This method will return instantly for looping AudioPlayer.
     /// </summary>
-    public UniTask WaitUntilCompletion();
+    UniTask WaitUntilCompletion();
 }
 ```
 
