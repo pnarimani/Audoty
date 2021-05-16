@@ -22,7 +22,7 @@ namespace Audoty
         }
         
         public int ClipIndex { get; }
-        public float ClipLength => _player.Clips[ClipIndex].length;
+        public float ClipLength => _player == null ? 0 : _player.Clips[ClipIndex].length;
 
         /// <summary>
         /// Returns true if the audio is currently playing
@@ -74,6 +74,9 @@ namespace Audoty
 #if UNITASK
         public async UniTask WaitUntilCompletion()
         {
+            if (_player == null)
+                return;
+            
             if (_completionTime <= Time.time)
                 return;
 
