@@ -72,9 +72,15 @@ namespace Audoty
         }
 
 #if UNITASK
+        /// <summary>
+        /// Waits until the audio has finished playing. This method will return instantly for looping AudioPlayer.
+        /// </summary>
         public async UniTask WaitUntilCompletion()
         {
             if (_player == null)
+                return;
+
+            if (_player.Loop)
                 return;
             
             if (_completionTime <= Time.time)

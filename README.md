@@ -156,6 +156,7 @@ Calling `Play` method will return an instance of `AudioHandle` which you can use
 public readonly struct AudioHandle
 {
     int ClipIndex { get; }
+    float ClipLength { get; }
    
     /// <summary>
     /// Returns true if the audio is currently playing
@@ -174,6 +175,12 @@ public readonly struct AudioHandle
     /// </summary>
     /// <returns>true if clip stops, false if clip was already stopped</returns>
     public bool Stop(float fadeOutTime)
+    
+    // Only available when UniTask is present:
+    /// <summary>
+    /// Waits until the audio has finished playing. This method will return instantly for looping AudioPlayer.
+    /// </summary>
+    public UniTask WaitUntilCompletion()
 }
 ```
 
