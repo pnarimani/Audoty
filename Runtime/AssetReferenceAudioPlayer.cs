@@ -1,4 +1,6 @@
-﻿using System;
+﻿#if ADDRESSABLES
+
+using System;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
@@ -13,7 +15,6 @@ using AudioHandleTask = System.Threading.Tasks.Task<Audoty.AudioHandle>;
 using AudioPlayerTask = System.Threading.Tasks.Task<Audoty.AudioPlayer>;
 #endif
 
-#if ADDRESSABLES
 
 namespace Audoty
 {
