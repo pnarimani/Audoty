@@ -1,8 +1,9 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using System;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
 #if UNITASK
+using Cysharp.Threading.Tasks;
 using AudioHandleTask = Cysharp.Threading.Tasks.UniTask<Audoty.AudioHandle>;
 using AudioPlayerTask = Cysharp.Threading.Tasks.UniTask<Audoty.AudioPlayer>;
 
@@ -16,6 +17,7 @@ using AudioPlayerTask = System.Threading.Tasks.Task<Audoty.AudioPlayer>;
 
 namespace Audoty
 {
+    [Serializable]
     public class AssetReferenceAudioPlayer : AssetReferenceT<AudioPlayer>
     {
         public AssetReferenceAudioPlayer(string guid) : base(guid)

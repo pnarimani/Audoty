@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 using Random = UnityEngine.Random;
 #if ODIN_INSPECTOR
 using Sirenix.OdinInspector;
@@ -10,6 +11,7 @@ using NaughtyAttributes;
 #endif
 
 #if UNITY_EDITOR
+using System.Diagnostics;
 using UnityEditor;
 
 #endif
@@ -360,22 +362,18 @@ namespace Audoty
 
             void PlayModeChanged(PlayModeStateChange obj)
             {
-                var players = AssetDatabase.FindAssets("t:AudioPlayer").Select(AssetDatabase.GUIDToAssetPath)
-                    .Select(AssetDatabase.LoadAssetAtPath<AudioPlayer>);
-
-
-                if (obj == PlayModeStateChange.ExitingEditMode)
+                if (obj == PlayModeStateChange.EnteredPlayMode)
                 {
-                    foreach (AudioPlayer audioPlayer in players)
+                    foreach (AudioPlayer audioPlayer in SaveKeys.Values)
                     {
                         if (audioPlayer._keepEditorPlayModeChanges)
                             continue;
                         audioPlayer.SaveParameters();
                     }
                 }
-                else if (obj == PlayModeStateChange.ExitingPlayMode)
+                else if (obj == PlayModeStateChange.EnteredEditMode)
                 {
-                    foreach (AudioPlayer audioPlayer in players)
+                    foreach (AudioPlayer audioPlayer in SaveKeys.Values)
                     {
                         if (audioPlayer._keepEditorPlayModeChanges)
                             continue;
@@ -390,6 +388,7 @@ namespace Audoty
         private void OnEnable()
         {
 #if UNITY_EDITOR
+            CheckSaveKeyConflict();
             ClipNames = _clips?.Select(x => x.name).ToArray();
 #endif
 
@@ -618,10 +617,7 @@ namespace Audoty
         private void OnValidate()
         {
             ClipNames = _clips?.Select(x => x.name).ToArray();
-
-            while (_randomizedSaveKey == 0)
-                _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
-
+            
             CheckSaveKeyConflict();
 
             ReconfigurePlayingAudioSources();
@@ -629,6 +625,9 @@ namespace Audoty
 
         private void CheckSaveKeyConflict()
         {
+            while (_randomizedSaveKey == 0)
+                _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
+            
             // Remove all entries which their audio player has been destroyed
             int[] keysToRemove = SaveKeys
                 .Where(x => x.Value == null)
