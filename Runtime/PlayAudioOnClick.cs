@@ -39,7 +39,7 @@ namespace Audoty
                 return;
             }
 
-            Audio.PlayForget(index);
+            Audio.Play(index);
         }
 
         public void OnPointerDown(PointerEventData eventData)

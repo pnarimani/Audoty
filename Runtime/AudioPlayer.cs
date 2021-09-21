@@ -1,11 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-
+using Random = UnityEngine.Random;
 #if ODIN_INSPECTOR
 using Sirenix.OdinInspector;
+
 #elif NAUGHTY_ATTRIBUTES
 using NaughtyAttributes;
+#endif
+
+#if UNITY_EDITOR
+using UnityEditor;
+
 #endif
 
 namespace Audoty
@@ -156,6 +162,12 @@ namespace Audoty
         [Tooltip("When AudioPlayer gets interrupted (stopped mid playing), instead of cutting the audio, audio will fade out")]
         private float _interruptFadeTime = 0.2f;
 
+#if ODIN_INSPECTOR || NAUGHTY_ATTRIBUTES
+        [BoxGroup("Parameters")]
+#endif
+        [SerializeField]
+        private bool _keepEditorPlayModeChanges;
+
         [SerializeField, HideInInspector] private int _randomizedSaveKey;
 
         internal readonly Dictionary<int, AudioSource> _playingSources = new Dictionary<int, AudioSource>();
@@ -180,7 +192,8 @@ namespace Audoty
                     return;
 
                 _loop = value;
-                SaveParameters();
+                if (_keepEditorPlayModeChanges)
+                    SaveParameters();
                 ReconfigurePlayingAudioSources();
             }
         }
@@ -191,7 +204,8 @@ namespace Audoty
             set
             {
                 _singleton = value;
-                SaveParameters();
+                if (_keepEditorPlayModeChanges)
+                    SaveParameters();
             }
         }
 
@@ -201,7 +215,8 @@ namespace Audoty
             set
             {
                 _volume = value;
-                SaveParameters();
+                if (_keepEditorPlayModeChanges)
+                    SaveParameters();
                 ReconfigurePlayingAudioSources();
             }
         }
@@ -212,7 +227,8 @@ namespace Audoty
             set
             {
                 _minDistance = value;
-                SaveParameters();
+                if (_keepEditorPlayModeChanges)
+                    SaveParameters();
                 ReconfigurePlayingAudioSources();
             }
         }
@@ -223,7 +239,8 @@ namespace Audoty
             set
             {
                 _maxDistance = value;
-                SaveParameters();
+                if (_keepEditorPlayModeChanges)
+                    SaveParameters();
                 ReconfigurePlayingAudioSources();
             }
         }
@@ -236,7 +253,8 @@ namespace Audoty
                 if (_pitch == value)
                     return;
                 _pitch = value;
-                SaveParameters();
+                if (_keepEditorPlayModeChanges)
+                    SaveParameters();
                 ReconfigurePlayingAudioSources();
             }
         }
@@ -333,20 +351,57 @@ namespace Audoty
             set => PlayerPrefs.SetFloat(PersistentPrefix + "dopplerLevel", value);
         }
 
+#if UNITY_EDITOR
+        [InitializeOnLoadMethod]
+        private static void InitializeOnLoad()
+        {
+            EditorApplication.playModeStateChanged -= PlayModeChanged;
+            EditorApplication.playModeStateChanged += PlayModeChanged;
+
+            void PlayModeChanged(PlayModeStateChange obj)
+            {
+                var players = AssetDatabase.FindAssets("t:AudioPlayer").Select(AssetDatabase.GUIDToAssetPath)
+                    .Select(AssetDatabase.LoadAssetAtPath<AudioPlayer>);
+
+
+                if (obj == PlayModeStateChange.ExitingEditMode)
+                {
+                    foreach (AudioPlayer audioPlayer in players)
+                    {
+                        if (audioPlayer._keepEditorPlayModeChanges)
+                            continue;
+                        audioPlayer.SaveParameters();
+                    }
+                }
+                else if (obj == PlayModeStateChange.ExitingPlayMode)
+                {
+                    foreach (AudioPlayer audioPlayer in players)
+                    {
+                        if (audioPlayer._keepEditorPlayModeChanges)
+                            continue;
+                        audioPlayer.LoadParameters();
+                    }
+                }
+            }
+        }
+
+#endif
 
         private void OnEnable()
         {
 #if UNITY_EDITOR
             ClipNames = _clips?.Select(x => x.name).ToArray();
 #endif
-            LoadParameters();
+
+            if (!Application.isEditor)
+                LoadParameters();
         }
 
         private void OnDisable()
         {
 #if UNITY_EDITOR
             ClipNames = _clips?.Select(x => x.name).ToArray();
-            
+
             int[] keys = _playingSources.Keys.ToArray();
             foreach (int id in keys)
             {
@@ -370,18 +425,9 @@ namespace Audoty
             InfoMessageType.Error,
             VisibleIf = "@UnityEngine.Application.isPlaying == false")]
 #endif
-        public void PlayForget()
+        private void PlayForget()
         {
-            PlayForget(Random.Range(0, _clips.Count));
-        }
-
-        /// <summary>
-        /// Plays a specific clip Fire & Forget style
-        /// </summary>
-        /// <param name="index"></param>
-        public void PlayForget(int index)
-        {
-            Play(index);
+            Play(Random.Range(0, _clips.Count));
         }
 
 
@@ -401,7 +447,7 @@ namespace Audoty
 #if ODIN_INSPECTOR
         [Button("Play Specific", ButtonSizes.Large, ButtonStyle.Box, Expanded = true)]
 #endif
-        public void PlayForget(
+        private void PlayForget(
 #if ODIN_INSPECTOR
             [ValueDropdown("ClipNames")]
 #endif
@@ -429,7 +475,8 @@ namespace Audoty
         /// <param name="tracking">Audio player will track this transform's movement</param>
         /// <param name="delay">Delay in seconds before AudioPlayer actually plays the audio. AudioPlayers in delay are considered playing/live</param>
         /// <returns></returns>
-        public AudioHandle Play(string clipName = null, Vector3? position = null, Transform tracking = null, float delay = 0)
+        public AudioHandle Play(string clipName = null, Vector3? position = null, Transform tracking = null,
+            float delay = 0)
         {
             if (_clips.Count == 0)
                 throw new NoClipsFoundException(this);
@@ -571,7 +618,7 @@ namespace Audoty
         private void OnValidate()
         {
             ClipNames = _clips?.Select(x => x.name).ToArray();
-            
+
             while (_randomizedSaveKey == 0)
                 _randomizedSaveKey = Random.Range(int.MinValue + 1, int.MaxValue - 1);
 
@@ -623,30 +670,28 @@ namespace Audoty
 #if UNITY_EDITOR
             CheckSaveKeyConflict();
 #endif
-            // We check isEditor this way to make it easier to develop non-editor code. 
-            // If you put the rest of the code in #else intellisense will not work.
-            if (Application.isEditor)
-                return;
 
-            if (_saveLoop)
+            bool forceLoad = !_keepEditorPlayModeChanges && Application.isEditor;
+
+            if (forceLoad || _saveLoop)
                 Loop = PersistentLoop;
 
-            if (_saveSingelton)
+            if (forceLoad || _saveSingelton)
                 Singleton = PersistentSingleton;
 
-            if (_saveVolume)
+            if (forceLoad || _saveVolume)
                 Volume = PersistentVolume;
 
-            if (_saveDistances)
+            if (forceLoad || _saveDistances)
             {
                 MinDistance = PersistentMinDistance;
                 MaxDistance = PersistentMaxDistance;
             }
 
-            if (_savePitch)
+            if (forceLoad || _savePitch)
                 Pitch = PersistentPitch;
 
-            if (_saveDopplerLevel)
+            if (forceLoad || _saveDopplerLevel)
                 DopplerLevel = PersistentDopplerLevel;
         }
 
@@ -655,30 +700,27 @@ namespace Audoty
 #if UNITY_EDITOR
             CheckSaveKeyConflict();
 #endif
-            // We check isEditor this way to make it easier to develop non-editor code. 
-            // If you put the rest of the code in #else intellisense will not work.
-            if (Application.isEditor)
-                return;
+            bool forceSave = !_keepEditorPlayModeChanges && Application.isEditor;
 
-            if (_saveLoop)
+            if (forceSave || _saveLoop)
                 PersistentLoop = Loop;
 
-            if (_saveSingelton)
+            if (forceSave || _saveSingelton)
                 PersistentSingleton = Singleton;
 
-            if (_saveVolume)
+            if (forceSave || _saveVolume)
                 PersistentVolume = Volume;
 
-            if (_saveDistances)
+            if (forceSave || _saveDistances)
             {
                 PersistentMinDistance = MinDistance;
                 PersistentMaxDistance = MaxDistance;
             }
 
-            if (_savePitch)
+            if (forceSave || _savePitch)
                 PersistentPitch = Pitch;
 
-            if (_saveDopplerLevel)
+            if (forceSave || _saveDopplerLevel)
                 PersistentDopplerLevel = DopplerLevel;
 
             PlayerPrefs.Save();

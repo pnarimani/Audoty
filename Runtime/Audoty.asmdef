@@ -4,7 +4,10 @@
     "references": [
         "UniTask",
         "Unity.EditorCoroutines.Editor",
-        "NaughtyAttributes.Core"
+        "NaughtyAttributes.Core",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "UniTask.Addressables"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -28,6 +31,11 @@
             "name": "com.dbrizov.naughtyattributes",
             "expression": "",
             "define": "NAUGHTY_ATTRIBUTES"
+        },
+        {
+            "name": "com.unity.addressables",
+            "expression": "",
+            "define": "ADDRESSABLES"
         }
     ],
     "noEngineReferences": false
