@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace Audoty
@@ -14,36 +15,44 @@ namespace Audoty
         [SerializeField] private bool _stopOnDisable = true;
 
         private AudioHandle _handle;
+        private Coroutine _coroutine;
 
         private void OnEnable()
         {
-            if (Audio == null)
+            _coroutine = StartCoroutine(Play());
+        }
+
+        private IEnumerator Play()
+        {
+            yield return new WaitUntil(() => IsAudioPlayerReady);
+            
+            if (AudioPlayerToUse == null)
             {
                 Debug.LogError("PlayAmbientAudio does not have AudioPlayer assigned.", this);
-                return;
+                yield break;
             }
 
-            if (Audio.Clips.Count == 0)
-                return;
+            if (AudioPlayerToUse.Clips.Count == 0)
+                yield break;
 
-            int index = UseRandomClip ? Random.Range(0, Audio.Clips.Count) : ClipIndex;
+            int index = UseRandomClip ? Random.Range(0, AudioPlayerToUse.Clips.Count) : ClipIndex;
 
             if (index == -1)
             {
                 Debug.LogError("No clip is selected in PlayAmbientAudio", this);
-                return;
+                yield break;
             }
 
-            _handle = Audio.Play(index, tracking: _trackingTarget);
+            _handle = AudioPlayerToUse.Play(index, tracking: _trackingTarget);
         }
 
         private void OnDisable()
         {
-            if (Audio == null)
-                return;
-
             if (_stopOnDisable)
+            {
+                StopCoroutine(_coroutine);
                 _handle.Stop();
+            }
         }
     }
 }

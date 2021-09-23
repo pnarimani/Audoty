@@ -21,17 +21,23 @@ namespace Audoty
         public void OnPointerClick(PointerEventData eventData)
         {
             if (!_play) return;
+            
+            if (!IsAudioPlayerReady)
+            {
+                Debug.LogWarning($"AudioPlayer was not ready. Could not play audio on click of {gameObject.name}");
+                return;
+            }
 
-            if (Audio == null)
+            if (AudioPlayerToUse == null)
             {
                 Debug.LogError("PlayAudioOnClick does not have AudioPlayer assigned.", this);
                 return;
             }
 
-            if (Audio.Clips.Count == 0)
+            if (AudioPlayerToUse.Clips.Count == 0)
                 return;
 
-            int index = UseRandomClip ? Random.Range(0, Audio.Clips.Count) : ClipIndex;
+            int index = UseRandomClip ? Random.Range(0, AudioPlayerToUse.Clips.Count) : ClipIndex;
 
             if (index == -1)
             {
@@ -39,7 +45,7 @@ namespace Audoty
                 return;
             }
 
-            Audio.Play(index);
+            AudioPlayerToUse.Play(index);
         }
 
         public void OnPointerDown(PointerEventData eventData)
